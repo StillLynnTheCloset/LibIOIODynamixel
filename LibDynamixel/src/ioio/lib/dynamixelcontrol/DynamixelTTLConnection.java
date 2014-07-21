@@ -40,7 +40,11 @@ public class DynamixelTTLConnection {
 		
 	}
 	
-	
+	private DynamixelIOIOMotor createMotor(int id) {
+		
+		return null;
+		
+	}
 	
 	
 	
