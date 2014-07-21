@@ -53,11 +53,12 @@ public class DynamixelIOIOMotor {
 		byte[] data = new byte[dataLen - 2];
 		is.read(data);
 		int checkSum = is.read();
+		Log.e("","Recieved checksum " + checkSum);
 		return data;
 		
 	}
 	
-	private byte generateChecksum(byte[] message, int id) {
+	private byte generateChecksum(byte[] message, byte id) {
 		
 		int checksum = message.length;
 		for (int i = 0; i < message.length; i++) {
@@ -78,13 +79,13 @@ public class DynamixelIOIOMotor {
 		for (int i = 0; i < message.length; i++) {
 			buffer[i + 4] = message[i];
 		}
-		buffer[buffer.length - 1] = generateChecksum(message, id);	
+		buffer[buffer.length - 1] = generateChecksum(message, (byte)id);	
 		
 		os.write(buffer);
 		
 	}
 	
-	private byte[] readAddress(int id, byte[] values) {
+	/*private byte[] readAddress(int id, byte[] values) {
 		
 		try {
 			//recieveMessage();
@@ -93,7 +94,7 @@ public class DynamixelIOIOMotor {
 			e.printStackTrace();
 		}
 		return null;
-	}
+	}*/
 	
 	private byte[] writeAddress(int id, byte[] values) {
 		
