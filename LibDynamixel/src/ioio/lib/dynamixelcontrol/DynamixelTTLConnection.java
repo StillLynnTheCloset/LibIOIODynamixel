@@ -17,43 +17,52 @@ public class DynamixelTTLConnection {
 	public final static Uart.Parity PARITY = Uart.Parity.NONE;
 	public final static Uart.StopBits STOP_BITS = Uart.StopBits.ONE;
 	private Uart uart;
+	private IOIO ioio;
 	
 	public DynamixelIOIOMotor[] connectedMotors[];
 	
 	InputStream is;
 	OutputStream os;
 	
+	int rxPin;
+	int txPin;
+	int comLock;
+	
 	public int currentBaudRate = 9600;
 	
 	public DynamixelTTLConnection(IOIO ioio, int rxPin, int txPin, int comLock) throws ConnectionLostException {
 		
-		DigitalInput.Spec input = new DigitalInput.Spec(rxPin,	DigitalInput.Spec.Mode.FLOATING);
-		DigitalOutput.Spec output = new DigitalOutput.Spec(txPin, DigitalOutput.Spec.Mode.OPEN_DRAIN);
-		
-		Log.e("","Before initilizing uart");
-		uart.close();
-		uart = ioio.openUart(input, output, currentBaudRate, PARITY, STOP_BITS);
-		Log.e("","after initilizing uart");
+		this.rxPin = rxPin;
+		this.txPin = txPin;
+		this.comLock = comLock;
+		this.ioio = ioio;
+
+		Log.d("","Before initilizing uart");
+		//uart.close();
+		Log.d("","Uart closed");
+		uart = createNewConnection(ioio, rxPin,txPin,comLock,currentBaudRate);
+		Log.d("","after initilizing uart");
 		
 		is = uart.getInputStream();
 		os = uart.getOutputStream();
+		
+		
 		
 	}
 	
 	private DynamixelIOIOMotor createMotor(int id) {
 		
-		return null;
+		return new DynamixelIOIOMotor(id,is,os);
 		
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
+	private Uart createNewConnection(IOIO ioio, int rxPin, int txPin, int comLock, int baudRate) throws ConnectionLostException {
+		
+		DigitalInput.Spec input = new DigitalInput.Spec(rxPin,	DigitalInput.Spec.Mode.FLOATING);
+		DigitalOutput.Spec output = new DigitalOutput.Spec(txPin, DigitalOutput.Spec.Mode.OPEN_DRAIN);
+		
+		return ioio.openUart(input, output, baudRate, PARITY, STOP_BITS);
+	}
 	
 	/**
 	 * ONLY TO BE USED WHEN A SINGLE MOTOR IS CONNECTED
@@ -67,7 +76,27 @@ public class DynamixelTTLConnection {
 	
 	public DynamixelIOIOMotor[] findAllMotors() {
 		
-		
+		for (int i = 0; i < BAUD_RATES.length; i++) {
+			
+			try {
+				uart.close();
+				uart = createNewConnection(ioio,rxPin,txPin,comLock,BAUD_RATES[i]);
+				is = uart.getInputStream();
+				os = uart.getOutputStream();
+			} catch (ConnectionLostException e) {
+				Log.d("","Creating uart connection failed");
+				continue;
+			}
+			
+			for (int j = 0; j < 254; j++) {
+				
+				DynamixelIOIOMotor testMotor = createMotor(j);
+				Log.d("","Current baud = " + BAUD_RATES[i] + " pinging motor " + j);
+				testMotor.ping();
+				
+			}
+			
+		}
 		return null;
 		
 	}
