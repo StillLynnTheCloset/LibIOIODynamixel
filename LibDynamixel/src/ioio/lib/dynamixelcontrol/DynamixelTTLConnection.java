@@ -12,7 +12,7 @@ import ioio.lib.api.exception.ConnectionLostException;
 
 public class DynamixelTTLConnection {
 
-	public final static int BAUD_RATE = 9600; 
+	//public final static int BAUD_RATE = 9600; 
 	public final static int[] BAUD_RATES = {9600, 19200, 38400, 57600, 115200, 200000, 250000, 400000, 500000, 1000000};
 	public final static Uart.Parity PARITY = Uart.Parity.NONE;
 	public final static Uart.StopBits STOP_BITS = Uart.StopBits.ONE;
@@ -20,6 +20,7 @@ public class DynamixelTTLConnection {
 	private IOIO ioio;
 	
 	public DynamixelIOIOMotor[] connectedMotors[];
+	public DynamixelIOIOMotor currentMotor;
 	
 	InputStream is;
 	OutputStream os;
@@ -50,13 +51,13 @@ public class DynamixelTTLConnection {
 		
 	}
 	
-	private DynamixelIOIOMotor createMotor(int id) {
+	public DynamixelIOIOMotor createMotor(int id) {
 		
 		return new DynamixelIOIOMotor(id,is,os);
 		
 	}
 	
-	private Uart createNewConnection(IOIO ioio, int rxPin, int txPin, int comLock, int baudRate) throws ConnectionLostException {
+	public Uart createNewConnection(IOIO ioio, int rxPin, int txPin, int comLock, int baudRate) throws ConnectionLostException {
 		
 		DigitalInput.Spec input = new DigitalInput.Spec(rxPin,	DigitalInput.Spec.Mode.FLOATING);
 		DigitalOutput.Spec output = new DigitalOutput.Spec(txPin, DigitalOutput.Spec.Mode.OPEN_DRAIN);
@@ -70,7 +71,35 @@ public class DynamixelTTLConnection {
 	 */
 	public void resetToDefault() {
 		
-		
+		for (int i = 0; i < BAUD_RATES.length; i++) {
+			
+			try {
+				uart.close();
+				uart = createNewConnection(ioio,rxPin,txPin,comLock,BAUD_RATES[i]);
+				is = uart.getInputStream();
+				os = uart.getOutputStream();
+			} catch (ConnectionLostException e) {
+				Log.d("","Creating uart connection failed for baud rate " + BAUD_RATES[i]);
+				continue;
+			}
+			
+			for (int j = 0; j < 254; j++) {
+				
+				DynamixelIOIOMotor testMotor = createMotor(j);
+				Log.d("","Current baud = " + BAUD_RATES[i] + " reseting motor " + j);
+				testMotor.setID(1);
+				testMotor.setBaudRate(9600);
+				
+				
+			}
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+		}
+		currentMotor = createMotor(1);
 		
 	}
 	
@@ -92,7 +121,9 @@ public class DynamixelTTLConnection {
 				
 				DynamixelIOIOMotor testMotor = createMotor(j);
 				Log.d("","Current baud = " + BAUD_RATES[i] + " pinging motor " + j);
-				testMotor.ping();
+				//testMotor.ping();
+				testMotor.setLEDColor(0xFE);
+				Log.d("","Color set");
 				
 			}
 			

@@ -31,6 +31,12 @@ public class DynamixelIOIOMotor {
 		int second = is.read();
 		if (first != 0xFF || second != 0xFF) {
 			Log.wtf("IOIO Dynamixel", "Incorrect start bytes on response from motor");
+			if (second == 0xFF) {
+				first = is.read();
+				if (first == 0xFF) {
+					Log.e("","Fixed start bytes");
+				}
+			}
 		}
 		
 		int servoID = is.read();
@@ -83,12 +89,14 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value, checksum };
 		try {
 			sendMessage(message);
-			
+			//recieveMessage();
 			recieveMessage();
-			return recieveMessage();
+			//return recieveMessage();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		Log.d("","Finished writing address");
 		return null;
 		
 	}
@@ -96,7 +104,7 @@ public class DynamixelIOIOMotor {
 	public void ping() {
 		
 		int length = 0x02;
-		byte[] params = {(byte) id, (byte) length, (byte) 0x03};
+		byte[] params = {(byte) id, (byte) length, (byte) 0x01};
 		byte checksum = generateChecksum(params);
 		
 		//                         ff           ff         id         length  instruction  checksum
@@ -113,13 +121,38 @@ public class DynamixelIOIOMotor {
 	
 	public void setBaudRate(int newBaudRate) {
 		
-		
+		writeAddress(id, 0x04, newBaudRate);
 		
 	}
 	
 	public void setID(int newID) {
 		
+		writeAddress(id, 0x03, newID);
+		this.id = newID;
 		
+	}
+	
+	public void setLEDColor(int color) {
+		
+		writeAddress(id, 0x19, color);
+		
+	}
+	
+	public void reset() {
+		
+		int length = 0x02;
+		byte[] params = {(byte) id, (byte) length, (byte) 0x06};
+		byte checksum = generateChecksum(params);
+		
+		//                         ff           ff         id         length  instruction  checksum
+		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x06, checksum };
+		try {
+			sendMessage(message);
+			
+			recieveMessage();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
 	}
 	
