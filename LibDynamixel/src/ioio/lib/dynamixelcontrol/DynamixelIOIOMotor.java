@@ -90,7 +90,7 @@ public class DynamixelIOIOMotor {
 		try {
 			sendMessage(message);
 			//recieveMessage();
-			recieveMessage();
+			//recieveMessage();
 			//return recieveMessage();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -121,7 +121,36 @@ public class DynamixelIOIOMotor {
 	
 	public void setBaudRate(int newBaudRate) {
 		
-		writeAddress(id, 0x04, newBaudRate);
+		writeAddress(id, 0x04, convertBaudRate(newBaudRate));
+		
+	}
+	
+	private byte convertBaudRate(int rate) {
+		
+		switch (rate) {
+		case 9600:
+			return (byte) 207;
+		case 19200:
+			return 103;
+		case 38400:
+			return 51;
+		case 57600:
+			return 34;
+		case 115200:
+			return 16;
+		case 200000:
+			return 9;
+		case 250000:
+			return 7;
+		case 400000:
+			return 4;
+		case 500000:
+			return 3;
+		case 1000000:
+			return 1;
+		default:
+			return 1;
+		}
 		
 	}
 	
@@ -149,7 +178,7 @@ public class DynamixelIOIOMotor {
 		try {
 			sendMessage(message);
 			
-			recieveMessage();
+			//recieveMessage();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
