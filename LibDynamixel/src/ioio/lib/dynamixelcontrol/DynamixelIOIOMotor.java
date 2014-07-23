@@ -10,8 +10,6 @@ import java.io.OutputStream;
 import android.util.Log;
 
 public class DynamixelIOIOMotor {
-
-	
 	
 	InputStream is;
 	OutputStream os;
@@ -33,39 +31,39 @@ public class DynamixelIOIOMotor {
 	private byte[] recieveMessage() throws IOException, ConnectionLostException {
 		// ff ff id length error data check
 		comLock.write(false);
-		
+		//int timeOut = 100;
 		int first = is.read();
 		int second = is.read();
-		if (first != 0xFF || second != 0xFF) {
-			Log.wtf("IOIO Dynamixel", "Incorrect start bytes on response from motor");
-			if (second == 0xFF) {
+		/*while (timeOut < 100 && (first != 0xFF || second != 0xFF)) {
+			
+			if (timeOut % 2 == 0) {
 				first = is.read();
-				if (first == 0xFF) {
-					Log.e("","Fixed start bytes");
-				}
+			} else {
+				second = is.read();
 			}
-		}
+			
+		}*/
 		
 		int servoID = is.read();
 		if (servoID != this.id) {
-			Log.d("","recieved a message from another servo " + servoID);
+			Log.e("Receiving","recieved a message from another servo " + servoID);
 			//return null;
 		}
 		int dataLen = is.read();
 		int error = is.read();
 		if (error != 0) {
-			Log.d("","An error was returned by the motor " + error);
+			Log.e("Receiving","An error was returned by the motor " + error);
 		}
 		
 		byte[] data = new byte[dataLen - 2];
 		is.read(data);
 		
 		for (int i = 0; i < data.length; i++) {
-			Log.d("","recieved byte " + data[i]);
+			Log.d("Receiving","recieved byte " + data[i]);
 		}
 		
 		int checkSum = is.read();
-		Log.d("","Recieved checksum " + checkSum);
+		Log.d("Receiving","Recieved checksum " + checkSum);
 		
 		comLock.write(true);
 		return data;
@@ -90,8 +88,6 @@ public class DynamixelIOIOMotor {
 	
 	private byte[] writeAddress(int id, int address, int value) {
 		
-		
-		
 		int length = 0x04;
 		byte[] params = {(byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value};
 		byte checksum = generateChecksum(params);
@@ -106,15 +102,17 @@ public class DynamixelIOIOMotor {
 			e.printStackTrace();
 			
 		}
-		
-		Log.d("","Finished writing address");
-		
 		try {
+			//Thread.sleep(20);
 			comLock.write(false);
 		} catch (ConnectionLostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		} //catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+		//}
+		Log.d("","Finished writing address");
 		return null;
 		
 		
@@ -130,9 +128,12 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x01, checksum };
 		try {
 			sendMessage(message);
-			
-			//recieveMessage();
+			is.skip(message.length);
+			recieveMessage();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ConnectionLostException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -140,7 +141,7 @@ public class DynamixelIOIOMotor {
 	
 	public void setBaudRate(int newBaudRate) {
 		
-		writeAddress(id, 0x04, convertBaudRate(newBaudRate));
+		writeAddress(id, 4, convertBaudRate(newBaudRate));
 		
 	}
 	
@@ -175,14 +176,14 @@ public class DynamixelIOIOMotor {
 	
 	public void setID(int newID) {
 		
-		writeAddress(id, 0x03, newID);
+		writeAddress(id, 3, newID);
 		this.id = newID;
 		
 	}
 	
 	public void setLEDColor(int color) {
 		
-		writeAddress(id, 0x19, color);
+		writeAddress(id, 25, color);
 		
 	}
 	
@@ -200,6 +201,70 @@ public class DynamixelIOIOMotor {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+	}
+	
+	public void moveToPosition(int position) {
+		
+		if (position > 1023) {
+			Log.e("","Tried to move to invalid position");
+			return;
+		}
+		if (position < 0) {
+			Log.e("","Tried to move to invalid position");
+			return;
+		}
+		Log.d("","Move to position " + position + "    " + (position & 0xFF) + "   " + ((position & 0xFF00) >> 8));
+		writeAddress(id, 30, position % 256);
+		try {
+			recieveMessage();
+		} catch (IOException | ConnectionLostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		writeAddress(id, 31, position / 256);
+		
+		//Log.e("","Moved");
+		
+	}
+	
+	public void setSpeed(int speed) {
+		
+		if (speed > 1023) {
+			Log.e("","Tried to set speed to invalid speed");
+			return;
+		}
+		if (speed < 0) {
+			Log.e("","Tried to move to invalid position");
+			return;
+		}
+		Log.e("","Move to speed " + speed + "    " + (speed & 0xFF) + "   " + ((speed & 0xFF00) >> 8));
+		writeAddress(id, 32, speed % 256);
+		
+		writeAddress(id, 33, speed / 256);
+		//Log.e("","Moved");
+		
+	}
+	
+	public void setTorqueEnable(int enable) {
+		
+		writeAddress(id, 24, enable & 1);
+		
+	}
+	
+	public void setMinAngle(int angle) {
+		
+		writeAddress(id, 6, angle % 256);
+		
+		writeAddress(id, 7, angle / 256);
+		
+	}
+	
+	public void setMaxAngle(int angle) {
+		
+		writeAddress(id, 8, angle % 256);
+		
+		writeAddress(id, 9, angle / 256);
 		
 	}
 	
