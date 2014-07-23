@@ -18,8 +18,8 @@ public class DynamixelTTLConnection {
 	private Uart uart;
 	private IOIO ioio;
 	
-	public DynamixelIOIOMotor[] connectedMotors[];
-	public DynamixelIOIOMotor currentMotor;
+	public DynamixelIOIOMotor[] connectedMotors;
+	DigitalOutput communicationLock;
 	
 	InputStream is;
 	OutputStream os;
@@ -28,7 +28,7 @@ public class DynamixelTTLConnection {
 	int txPin;
 	int comLock;
 	
-	public int currentBaudRate = 9600;
+	public int currentBaudRate = 1000000;
 	
 	public DynamixelTTLConnection(IOIO ioio, int rxPin, int txPin, int comLock) throws ConnectionLostException {
 		
@@ -38,19 +38,18 @@ public class DynamixelTTLConnection {
 		this.ioio = ioio;
 
 		Log.d("","Before initilizing uart");
-		//uart.close();
-		Log.d("","Uart closed");
 		uart = createNewConnection(ioio, rxPin,txPin,comLock,currentBaudRate);
 		Log.d("","after initilizing uart");
 		
 		is = uart.getInputStream();
 		os = uart.getOutputStream();
+		communicationLock = ioio.openDigitalOutput(comLock);
 		
 	}
 	
 	public DynamixelIOIOMotor createMotor(int id) {
 		
-		return new DynamixelIOIOMotor(id,is,os);
+		return new DynamixelIOIOMotor(id, is, os, communicationLock);
 		
 	}
 	
@@ -64,43 +63,35 @@ public class DynamixelTTLConnection {
 	
 	/**
 	 * ONLY TO BE USED WHEN A SINGLE MOTOR IS CONNECTED
-	 * This will reset the motor to its factory default settings, with one exception, the baud rate will be set to 9600
+	 * This will reset the motor to its factory default settings, 
 	 */
 	public void resetToDefault() {
 		
-		for (int i = 0; i < BAUD_RATES.length; i++) {
-			
+		for (int i = 0; i < 254; i++) {
 			try {
 				uart.close();
-				uart = createNewConnection(ioio,rxPin,txPin,comLock,BAUD_RATES[i]);
+				uart = createNewConnection(ioio,rxPin, txPin, comLock, 2000000 / (i + 1));
 				is = uart.getInputStream();
 				os = uart.getOutputStream();
-				
-				for (int j = 0; j < 254; j++) {
+				for (int j = 1; j < 253; j++) {
 					
 					DynamixelIOIOMotor testMotor = createMotor(j);
-					Log.d("","Current baud = " + BAUD_RATES[i] + " reseting motor " + j);
-					testMotor.setID(1);
-					testMotor.setBaudRate(9600);
-					
-				}
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+					Log.d("","Current baud = " + 2000000 / (i + 1) +" (" + i + ") reseting motor " + j);
+					testMotor.reset();
+					try {
+						Thread.sleep(1);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 			} catch (ConnectionLostException e) {
-				Log.d("","Creating uart connection failed for baud rate " + BAUD_RATES[i]);
+				Log.e("","Creating uart connection failed for baud rate " + BAUD_RATES[i]);
 				continue;
 			}
-			
-			
-			
 		}
-		currentMotor = createMotor(1);
 		
 	}
-	
+
 	public DynamixelIOIOMotor[] findAllMotors() {
 		
 		for (int i = 0; i < BAUD_RATES.length; i++) {
@@ -116,15 +107,11 @@ public class DynamixelTTLConnection {
 			}
 			
 			for (int j = 0; j < 254; j++) {
-				
 				DynamixelIOIOMotor testMotor = createMotor(j);
 				Log.d("","Current baud = " + BAUD_RATES[i] + " pinging motor " + j);
-				//testMotor.ping();
 				testMotor.setLEDColor(0xFE);
 				Log.d("","Color set");
-				
 			}
-			
 		}
 		return null;
 		
