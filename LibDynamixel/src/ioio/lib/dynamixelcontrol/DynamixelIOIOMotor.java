@@ -97,8 +97,9 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value, checksum };
 		try {
 			comLock.write(true);
-			Thread.sleep(50);
+			Thread.sleep(30);
 			sendMessage(message);
+			comLock.write(false);
 		} catch (IOException | ConnectionLostException e) {
 			e.printStackTrace();
 			
@@ -106,12 +107,6 @@ public class DynamixelIOIOMotor {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		try {
-			comLock.write(false);
-		} catch (ConnectionLostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
 		Log.d("","Finished writing address");
 		return null;
 		
@@ -128,8 +123,9 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) lowByte, (byte) highByte, checksum };
 		try {
 			comLock.write(true);
-			Thread.sleep(50);
+			Thread.sleep(30);
 			sendMessage(message);
+			comLock.write(false);
 		} catch (IOException | ConnectionLostException e) {
 			e.printStackTrace();
 			
@@ -137,12 +133,6 @@ public class DynamixelIOIOMotor {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		try {
-			comLock.write(false);
-		} catch (ConnectionLostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
 		Log.d("","Finished writing address");
 		return null;
 		
@@ -251,7 +241,7 @@ public class DynamixelIOIOMotor {
 	
 	public void setSpeed(int speed) {
 		
-		if (speed > 1023) {
+		if (speed > 2047) {
 			Log.e("","Tried to set speed to invalid speed");
 			return;
 		}

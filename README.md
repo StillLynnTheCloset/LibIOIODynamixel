@@ -1,10 +1,10 @@
 LibIOIODynamixel
 ================
 
-CURRENTLY NOT WORKING
+Can currently send sommands to the motor, but cannot recieve any messages.
 
 
-A library for controlling a Dynamixel servo with an Android device using a IOIO board.  
+A library for controlling a Dynamixel servo with an Android device using a IOIO board. 
 
 Requires the IOIO libraries be added to the project properties.
 
