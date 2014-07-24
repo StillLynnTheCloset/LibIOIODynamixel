@@ -28,7 +28,7 @@ public class DynamixelTTLConnection {
 	int txPin;
 	int comLock;
 	
-	public int currentBaudRate = 1000000;
+	public int currentBaudRate = 9600;
 	
 	public DynamixelTTLConnection(IOIO ioio, int rxPin, int txPin, int comLock) throws ConnectionLostException {
 		

@@ -88,6 +88,7 @@ public class DynamixelIOIOMotor {
 	
 	private byte[] writeAddress(int id, int address, int value) {
 		
+		
 		int length = 0x04;
 		byte[] params = {(byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value};
 		byte checksum = generateChecksum(params);
@@ -96,25 +97,54 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value, checksum };
 		try {
 			comLock.write(true);
-			
+			Thread.sleep(50);
 			sendMessage(message);
 		} catch (IOException | ConnectionLostException e) {
 			e.printStackTrace();
 			
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		try {
-			//Thread.sleep(20);
 			comLock.write(false);
 		} catch (ConnectionLostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} //catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			//e.printStackTrace();
-		//}
+		} 
 		Log.d("","Finished writing address");
 		return null;
 		
+		
+	}
+	
+	private byte[] writeAddress(int id, int address, int lowByte, int highByte) {
+		
+		int length = 0x05;
+		byte[] params = {(byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) lowByte, (byte) highByte};
+		byte checksum = generateChecksum(params);
+		
+		//                         ff           ff         id         length  instruction                                  data             checksum
+		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) lowByte, (byte) highByte, checksum };
+		try {
+			comLock.write(true);
+			Thread.sleep(50);
+			sendMessage(message);
+		} catch (IOException | ConnectionLostException e) {
+			e.printStackTrace();
+			
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		try {
+			comLock.write(false);
+		} catch (ConnectionLostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		Log.d("","Finished writing address");
+		return null;
 		
 	}
 	
@@ -141,7 +171,7 @@ public class DynamixelIOIOMotor {
 	
 	public void setBaudRate(int newBaudRate) {
 		
-		writeAddress(id, 4, convertBaudRate(newBaudRate));
+		writeAddress(id, 0x04, convertBaudRate(newBaudRate));
 		
 	}
 	
@@ -176,14 +206,14 @@ public class DynamixelIOIOMotor {
 	
 	public void setID(int newID) {
 		
-		writeAddress(id, 3, newID);
+		writeAddress(id, 0x03, newID);
 		this.id = newID;
 		
 	}
 	
 	public void setLEDColor(int color) {
 		
-		writeAddress(id, 25, color);
+		writeAddress(id, 0x19, color);
 		
 	}
 	
@@ -214,17 +244,8 @@ public class DynamixelIOIOMotor {
 			Log.e("","Tried to move to invalid position");
 			return;
 		}
-		Log.d("","Move to position " + position + "    " + (position & 0xFF) + "   " + ((position & 0xFF00) >> 8));
-		writeAddress(id, 30, position % 256);
-		try {
-			recieveMessage();
-		} catch (IOException | ConnectionLostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		writeAddress(id, 31, position / 256);
-		
-		//Log.e("","Moved");
+		Log.e("","Move to position " + position + "    " + position % 256 + "   " + position / 256);
+		writeAddress(id, 0x1E, position % 256, position / 256);
 		
 	}
 	
@@ -235,36 +256,30 @@ public class DynamixelIOIOMotor {
 			return;
 		}
 		if (speed < 0) {
-			Log.e("","Tried to move to invalid position");
+			Log.e("","Tried to move to invalid speed");
 			return;
 		}
-		Log.e("","Move to speed " + speed + "    " + (speed & 0xFF) + "   " + ((speed & 0xFF00) >> 8));
-		writeAddress(id, 32, speed % 256);
-		
-		writeAddress(id, 33, speed / 256);
-		//Log.e("","Moved");
+		Log.e("","Move at speed " + speed + "    " + speed % 256 + "   " + speed / 256);
+		writeAddress(id, 0x20, speed % 256, speed / 256);
+
 		
 	}
 	
 	public void setTorqueEnable(int enable) {
 		
-		writeAddress(id, 24, enable & 1);
+		writeAddress(id, 0x18, enable);
 		
 	}
 	
 	public void setMinAngle(int angle) {
 		
-		writeAddress(id, 6, angle % 256);
-		
-		writeAddress(id, 7, angle / 256);
-		
+		writeAddress(id, 0x06, angle % 256, angle / 256);
+
 	}
 	
 	public void setMaxAngle(int angle) {
 		
-		writeAddress(id, 8, angle % 256);
-		
-		writeAddress(id, 9, angle / 256);
+		writeAddress(id, 0x08, angle % 256, angle / 256);
 		
 	}
 	
