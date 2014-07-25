@@ -148,7 +148,7 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x01, checksum };
 		try {
 			sendMessage(message);
-			is.skip(message.length);
+			//is.skip(message.length);
 			recieveMessage();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -270,6 +270,18 @@ public class DynamixelIOIOMotor {
 	public void setMaxAngle(int angle) {
 		
 		writeAddress(id, 0x08, angle % 256, angle / 256);
+		
+	}
+	
+	public void setContinousRotation(int enable) {
+		
+		if (enable == 0) {
+			setMinAngle(1);
+			setMaxAngle(1023);
+		} else {
+			setMinAngle(0);
+			setMaxAngle(0);
+		}
 		
 	}
 	

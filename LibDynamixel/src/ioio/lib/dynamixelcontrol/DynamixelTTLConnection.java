@@ -49,7 +49,9 @@ public class DynamixelTTLConnection {
 	
 	public DynamixelIOIOMotor createMotor(int id) {
 		
-		return new DynamixelIOIOMotor(id, is, os, communicationLock);
+		DynamixelIOIOMotor motor = new DynamixelIOIOMotor(id, is, os, communicationLock);
+		motor.setTorqueEnable(1);
+		return motor;
 		
 	}
 	
