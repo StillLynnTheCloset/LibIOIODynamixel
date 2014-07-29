@@ -1,3 +1,26 @@
+/*
+ * The MIT License (MIT)
+ *
+ *Copyright (c) 2014 Eric Hochendoner
+ *
+ *Permission is hereby granted, free of charge, to any person obtaining a copy
+ *of this software and associated documentation files (the "Software"), to deal
+ *in the Software without restriction, including without limitation the rights
+ *to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *copies of the Software, and to permit persons to whom the Software is
+ *furnished to do so, subject to the following conditions:
+ *
+ *The above copyright notice and this permission notice shall be included in all
+ *copies or substantial portions of the Software.
+ *
+ *THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *SOFTWARE.
+ */
 package ioio.lib.dynamixelcontrol;
 
 import ioio.lib.api.DigitalOutput;
@@ -11,13 +34,19 @@ import android.util.Log;
 
 public class DynamixelIOIOMotor {
 	
-	InputStream is;
-	OutputStream os;
-	DigitalOutput comLock;
-	int id;
+	public final static int MOTOR_AX12A = 0;
+	public final static int MOTOR_MX28T = 1;
 	
-	int homePosition = 0xFF;
-	int currentPosition = 0xFF;
+	private InputStream is;
+	private OutputStream os;
+	private DigitalOutput comLock;
+	private int id;
+	private int motorType;
+	private int minAngleLimit = 0;
+	private int maxAngleLimit = 300;
+	private double encoderPerSecPerUnit = 1.58;
+	//private int homePosition = 0xFF;
+	//private int currentPosition = 0xFF;
 	
 	public DynamixelIOIOMotor(int id, InputStream input, OutputStream output, DigitalOutput comLock) {
 		
@@ -28,21 +57,33 @@ public class DynamixelIOIOMotor {
 		
 	}
 	
+	public void setMotorType(int motor) {
+		
+
+		
+	}
+	
 	private byte[] recieveMessage() throws IOException, ConnectionLostException {
 		// ff ff id length error data check
 		comLock.write(false);
-		//int timeOut = 100;
+//		int timeOut = 100;
 		int first = is.read();
 		int second = is.read();
-		/*while (timeOut < 100 && (first != 0xFF || second != 0xFF)) {
+		
+		if (first != 0xFF || second != 0xFF) {
 			
-			if (timeOut % 2 == 0) {
-				first = is.read();
-			} else {
-				second = is.read();
-			}
-			
-		}*/
+			Log.e("Receiving","received bad start bytes");
+//			while (timeOut < 100 && (first != 0xFF || second != 0xFF)) {
+//				
+//				if (timeOut % 2 == 0) {
+//					first = is.read();
+//				} else {
+//					second = is.read();
+//				}
+//				
+//			}
+		}
+		
 		
 		int servoID = is.read();
 		if (servoID != this.id) {
@@ -99,7 +140,8 @@ public class DynamixelIOIOMotor {
 			comLock.write(true);
 			Thread.sleep(30);
 			sendMessage(message);
-			comLock.write(false);
+			//recieveMessage();
+			//comLock.write(false);
 		} catch (IOException | ConnectionLostException e) {
 			e.printStackTrace();
 			
@@ -155,7 +197,7 @@ public class DynamixelIOIOMotor {
 		} catch (ConnectionLostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		} 
 		
 	}
 	
@@ -281,6 +323,76 @@ public class DynamixelIOIOMotor {
 		} else {
 			setMinAngle(0);
 			setMaxAngle(0);
+		}
+		
+	}
+	
+	public int getSpeedFromCoefficient(double coefficientChange, double time) {
+		
+		return getSpeedFromEncoder(encoderFromCoefficient(coefficientChange), time);
+		
+	}
+	
+	
+	private int getSpeedFromEncoder(int encoderDistance, double time) {
+		
+		time /= 1000;
+		double encodePerSec = encoderDistance / time;
+		
+		return (int) (encodePerSec / encoderPerSecPerUnit);
+		
+	}
+	
+	public int encoderFromCoefficient(double coefficient) {
+		
+		return encoderFromRadians(radiansFromCoefficient(coefficient));
+		
+	}
+	
+	private double radiansFromCoefficient(double coefficient) {
+		
+		int range = maxAngleLimit - minAngleLimit;
+		coefficient += 1;
+		coefficient /= 2;
+		double deg = range * coefficient;
+		return Math.toRadians(deg);
+		
+	}
+	
+	private int encoderFromRadians(double radians) {
+		
+		return (int) (radians * getMotorMaxEncoder() / Math.toRadians(getMotorMaxAngle()));
+		
+	}
+	
+	private int getMotorMaxEncoder() {
+		
+		switch(this.motorType) {
+		
+		case MOTOR_AX12A:
+			return 1024;
+			
+		case MOTOR_MX28T:
+			return 4096;
+			
+		default:
+			return 1024;
+		}
+		
+	}
+	
+	private int getMotorMaxAngle() {
+		
+		switch(this.motorType) {
+		
+		case MOTOR_AX12A:
+			return 300;
+			
+		case MOTOR_MX28T:
+			return 360;
+			
+		default:
+			return 300;
 		}
 		
 	}
