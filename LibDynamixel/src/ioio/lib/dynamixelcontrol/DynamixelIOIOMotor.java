@@ -63,48 +63,52 @@ public class DynamixelIOIOMotor {
 		
 	}
 	
-	private byte[] recieveMessage() throws IOException, ConnectionLostException {
+	private byte[] recieveMessage(Boolean logOutput) throws IOException, ConnectionLostException {
 		// ff ff id length error data check
 		comLock.write(false);
 //		int timeOut = 100;
 		int first = is.read();
 		int second = is.read();
-		
+		if (logOutput) Log.e("Receiving", "  ");
+		if (logOutput) Log.e("Receiving", "  ");
+		if (logOutput) Log.e("Receiving", "  ");
+		if (logOutput) Log.e("Receiving", "Start byte " + first);
+		if (logOutput) Log.e("Receiving", "Start byte " + second);
+		int servoID = 0;
 		if (first != 0xFF || second != 0xFF) {
 			
-			Log.e("Receiving","received bad start bytes");
-//			while (timeOut < 100 && (first != 0xFF || second != 0xFF)) {
-//				
-//				if (timeOut % 2 == 0) {
-//					first = is.read();
-//				} else {
-//					second = is.read();
-//				}
-//				
-//			}
+			if (logOutput) Log.e("Receiving","Received bad start bytes");
+			if (first == 0xFF) {
+				if (logOutput) Log.e("Receiving", "Missed first start byte, recovered");
+				servoID = second;
+			}
+		
+		} else {
+			servoID = is.read();
 		}
 		
-		
-		int servoID = is.read();
-		if (servoID != this.id) {
-			Log.e("Receiving","recieved a message from another servo " + servoID);
-			//return null;
-		}
+		if (logOutput) Log.e("Receiving", "Servo id " + servoID);
+//		if (servoID != this.id) {
+//			Log.e("Receiving","recieved a message from another servo " + servoID);
+//			//return null;
+//		}
 		int dataLen = is.read();
+		if (logOutput) Log.e("Receiving", "Data lenght " + dataLen);
 		int error = is.read();
-		if (error != 0) {
-			Log.e("Receiving","An error was returned by the motor " + error);
-		}
+		if (logOutput) Log.e("Receiving", "Error" + error);
+//		if (error != 0) {
+//			Log.e("Receiving","An error was returned by the motor " + error);
+//		}
 		
 		byte[] data = new byte[dataLen - 2];
 		is.read(data);
 		
 		for (int i = 0; i < data.length; i++) {
-			Log.d("Receiving","recieved byte " + data[i]);
+			if (logOutput) Log.e("Receiving","Data " + data[i]);
 		}
 		
 		int checkSum = is.read();
-		Log.d("Receiving","Recieved checksum " + checkSum);
+		if (logOutput) Log.e("Receiving","Checksum " + checkSum);
 		
 		comLock.write(true);
 		return data;
@@ -121,9 +125,51 @@ public class DynamixelIOIOMotor {
 		return (byte) checksum;
 	}
 	
-	private void sendMessage(byte[] message) throws IOException {
+	private byte[] sendMessage(byte[] message) throws IOException {
 		
-		os.write(message);
+		try {
+			
+			Thread.sleep(30);
+			os.write(message);
+			
+			Thread.sleep(30);
+			//is.skip(message.length);
+			recieveMessage(false);
+			
+			Thread.sleep(30);
+			return recieveMessage(true);
+			
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ConnectionLostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+		
+	}
+	
+	private byte[] readAddress(int id, int address, int length) {
+		
+		int messageLength = 0x04;
+		byte[] params = {(byte) id, (byte) length, (byte) 0x02, (byte) address, (byte) length};
+		byte checksum = generateChecksum(params);
+		
+		//                         ff           ff         id         length          instruction               data             checksum
+		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) messageLength, (byte) 0x02, (byte) address, (byte) length, checksum };
+		try {
+			comLock.write(true);
+			//Thread.sleep(30);
+			return sendMessage(message);
+			//comLock.write(false);
+			//return recieveMessage();
+		} catch (IOException | ConnectionLostException e) {
+			e.printStackTrace();
+			
+		}
+		Log.d("","Finished reading address");
+		return null;
 		
 	}
 	
@@ -138,20 +184,16 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value, checksum };
 		try {
 			comLock.write(true);
-			Thread.sleep(30);
+			//Thread.sleep(30);
 			sendMessage(message);
+			comLock.write(false);
 			//recieveMessage();
-			//comLock.write(false);
 		} catch (IOException | ConnectionLostException e) {
 			e.printStackTrace();
 			
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 		Log.d("","Finished writing address");
 		return null;
-		
 		
 	}
 	
@@ -165,16 +207,14 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) lowByte, (byte) highByte, checksum };
 		try {
 			comLock.write(true);
-			Thread.sleep(30);
+			//Thread.sleep(30);
 			sendMessage(message);
 			comLock.write(false);
+			//recieveMessage();
 		} catch (IOException | ConnectionLostException e) {
 			e.printStackTrace();
 			
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		} 
 		Log.d("","Finished writing address");
 		return null;
 		
@@ -190,14 +230,10 @@ public class DynamixelIOIOMotor {
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x01, checksum };
 		try {
 			sendMessage(message);
-			//is.skip(message.length);
-			recieveMessage();
+			//recieveMessage();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (ConnectionLostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
+		}
 		
 	}
 	
@@ -394,6 +430,16 @@ public class DynamixelIOIOMotor {
 		default:
 			return 300;
 		}
+		
+	}
+	
+	public int readPosition() {
+		
+		byte[] data = readAddress(id, 0x24, 2);
+		if (data.length != 2) {
+			return -1;
+		}
+		return data[0] + 256 * data[1];
 		
 	}
 	
