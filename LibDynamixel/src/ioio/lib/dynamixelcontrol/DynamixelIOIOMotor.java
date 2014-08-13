@@ -39,12 +39,16 @@ public class DynamixelIOIOMotor {
 	
 	private InputStream is;
 	private OutputStream os;
-	private DigitalOutput comLock;
+	//private DigitalOutput comLock;
 	private int id;
 	private int motorType;
+	
+	public int minAngle = 0;
+	public int maxAngle = 300;
 	private int minAngleLimit = 0;
 	private int maxAngleLimit = 300;
 	private double encoderPerSecPerUnit = 1.58;
+	private int currentPosition = 0;
 	//private int homePosition = 0xFF;
 	//private int currentPosition = 0xFF;
 	
@@ -53,17 +57,19 @@ public class DynamixelIOIOMotor {
 		this.id = id;
 		is = input;
 		os = output;
-		this.comLock = comLock;
+		//this.comLock = comLock;
 		
 	}
 	
 	public void setMotorType(int motor) {
 		
-
+		this.motorType = motor;
 		
 	}
 	
 	private byte[] recieveMessage(Boolean logOutput) throws IOException, ConnectionLostException {
+		
+		return null;/*
 		// ff ff id length error data check
 		comLock.write(false);
 //		int timeOut = 100;
@@ -111,7 +117,7 @@ public class DynamixelIOIOMotor {
 		if (logOutput) Log.e("Receiving","Checksum " + checkSum);
 		
 		comLock.write(true);
-		return data;
+		return data;*/
 		
 	}
 	
@@ -132,20 +138,21 @@ public class DynamixelIOIOMotor {
 			Thread.sleep(30);
 			os.write(message);
 			
-			Thread.sleep(30);
+			//Thread.sleep(30);
 			//is.skip(message.length);
-			recieveMessage(false);
+			//recieveMessage(false);
 			
-			Thread.sleep(30);
-			return recieveMessage(true);
+			//Thread.sleep(30);
+			return null;//recieveMessage(true);
 			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (ConnectionLostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
+//		} catch (ConnectionLostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		return null;
 		
 	}
@@ -159,12 +166,12 @@ public class DynamixelIOIOMotor {
 		//                         ff           ff         id         length          instruction               data             checksum
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) messageLength, (byte) 0x02, (byte) address, (byte) length, checksum };
 		try {
-			comLock.write(true);
+			//comLock.write(true);
 			//Thread.sleep(30);
 			return sendMessage(message);
 			//comLock.write(false);
 			//return recieveMessage();
-		} catch (IOException | ConnectionLostException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 			
 		}
@@ -183,12 +190,12 @@ public class DynamixelIOIOMotor {
 		//                         ff           ff         id         length  instruction               data             checksum
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) value, checksum };
 		try {
-			comLock.write(true);
+			//comLock.write(true);
 			//Thread.sleep(30);
 			sendMessage(message);
-			comLock.write(false);
+			//comLock.write(false);
 			//recieveMessage();
-		} catch (IOException | ConnectionLostException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 			
 		}
@@ -206,12 +213,12 @@ public class DynamixelIOIOMotor {
 		//                         ff           ff         id         length  instruction                                  data             checksum
 		byte[] message = {(byte) 0xFF, (byte) 0xFF, (byte) id, (byte) length, (byte) 0x03, (byte) address, (byte) lowByte, (byte) highByte, checksum };
 		try {
-			comLock.write(true);
+			//comLock.write(true);
 			//Thread.sleep(30);
 			sendMessage(message);
-			comLock.write(false);
+			//comLock.write(false);
 			//recieveMessage();
-		} catch (IOException | ConnectionLostException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 			
 		} 
@@ -304,31 +311,49 @@ public class DynamixelIOIOMotor {
 	
 	public void moveToPosition(int position) {
 		
-		if (position > 1023) {
-			Log.e("","Tried to move to invalid position");
+		if (position > 4095
+				) {
+			Log.e("","Tried to move to invalid position " + position);
 			return;
 		}
 		if (position < 0) {
-			Log.e("","Tried to move to invalid position");
+			Log.e("","Tried to move to invalid position " + position);
 			return;
 		}
-		Log.e("","Move to position " + position + "    " + position % 256 + "   " + position / 256);
+		this.currentPosition = position;
+		Log.d("","Move to position " + position + "    " + position % 256 + "   " + position / 256);
 		writeAddress(id, 0x1E, position % 256, position / 256);
 		
 	}
 	
 	public void setSpeed(int speed) {
 		
-		if (speed > 2047) {
-			Log.e("","Tried to set speed to invalid speed");
-			return;
+		if (speed > 1023) {
+			//Log.e("","Tried to set speed to invalid speed " + speed);
+			speed = 1023;
 		}
-		if (speed < 0) {
-			Log.e("","Tried to move to invalid speed");
-			return;
+		if (speed <= 0) {
+			//Log.e("","Tried to move to invalid speed "+ speed);
+			speed = 1;
 		}
-		Log.e("","Move at speed " + speed + "    " + speed % 256 + "   " + speed / 256);
+		//Log.e("","Move at speed " + speed + "    " + speed % 256 + "   " + speed / 256);
 		writeAddress(id, 0x20, speed % 256, speed / 256);
+
+		
+	}
+	
+	public void setAcceleration(int acceleration) {
+		
+		if (acceleration > 254) {
+			//Log.e("","Tried to set speed to invalid speed " + acceleration);
+			acceleration = 254;
+		}
+		if (acceleration < 0) {
+			//Log.e("","Tried to move to invalid speed "+ acceleration);
+			return;
+		}
+		//Log.e("","Move at speed " + acceleration + "    " + acceleration % 256 + "   " + acceleration / 256);
+		writeAddress(id, 73, acceleration);
 
 		
 	}
@@ -355,7 +380,7 @@ public class DynamixelIOIOMotor {
 		
 		if (enable == 0) {
 			setMinAngle(1);
-			setMaxAngle(1023);
+			setMaxAngle(4095);
 		} else {
 			setMinAngle(0);
 			setMaxAngle(0);
@@ -363,41 +388,36 @@ public class DynamixelIOIOMotor {
 		
 	}
 	
-	public int getSpeedFromCoefficient(double coefficientChange, double time) {
+	public void moveToPositionInTime(double  newPosition, double time) {
 		
-		return getSpeedFromEncoder(encoderFromCoefficient(coefficientChange), time);
+		setSpeed(getSpeedFromEncoder(currentPosition - getEncoderFromCoefficient(newPosition), time));
+		moveToPosition(getEncoderFromCoefficient(newPosition));
 		
 	}
 	
-	
-	private int getSpeedFromEncoder(int encoderDistance, double time) {
+	private int getSpeedFromCoeficient(double coefficient, double time) {
 		
-		time /= 1000;
-		double encodePerSec = encoderDistance / time;
-		
+		time *= getMotorMaxEncoder();
+		time /= 1000000;
+		double encodePerSec = coefficient * getMotorMaxEncoder() / time;
+		encodePerSec = Math.abs(encodePerSec);
 		return (int) (encodePerSec / encoderPerSecPerUnit);
 		
 	}
 	
-	public int encoderFromCoefficient(double coefficient) {
+	private int getSpeedFromEncoder(int encoderDistance, double time) {
 		
-		return encoderFromRadians(radiansFromCoefficient(coefficient));
-		
-	}
-	
-	private double radiansFromCoefficient(double coefficient) {
-		
-		int range = maxAngleLimit - minAngleLimit;
-		coefficient += 1;
-		coefficient /= 2;
-		double deg = range * coefficient;
-		return Math.toRadians(deg);
+		time *= getMotorMaxEncoder();
+		time /= 1000000;
+		double encodePerSec = encoderDistance / time;
+		encodePerSec = Math.abs(encodePerSec);
+		return (int) (encodePerSec / encoderPerSecPerUnit);
 		
 	}
 	
-	private int encoderFromRadians(double radians) {
+	private int getEncoderFromCoefficient(double coefficient) {
 		
-		return (int) (radians * getMotorMaxEncoder() / Math.toRadians(getMotorMaxAngle()));
+		return (int) ((1 + coefficient) * getMotorMaxEncoder() / 2);
 		
 	}
 	
